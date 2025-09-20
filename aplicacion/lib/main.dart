@@ -204,7 +204,10 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _garageDoorOpen = false;
   bool _livingWindowOpen = false;
   bool _bedroomWindowOpen = false;
+  bool _bedroom2WindowOpen = false;
   bool _acOn = false;
+  bool _sprinklersOn = false; // Nuevo: regadores
+  bool _showTemperature = false; // Nuevo: pantalla de temperatura
 
   int _currentIndex = 0;
 
@@ -233,7 +236,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       _garageDoorOpen = false;
                       _livingWindowOpen = false;
                       _bedroomWindowOpen = false;
+                      _bedroom2WindowOpen = false;
                       _acOn = false;
+                      _sprinklersOn = false;
+                      _showTemperature = false;
                     }),
                   ),
                 ),
@@ -241,7 +247,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
                   sliver: SliverToBoxAdapter(
                     child: Text(
-                      'Aire acondicionado',
+                      'Aire acondicionado y extras',
                       style: theme.textTheme.titleLarge?.copyWith(
                         color: theme.colorScheme.primary,
                         fontWeight: FontWeight.bold,
@@ -254,15 +260,40 @@ class _HomeScreenState extends State<HomeScreen> {
                     horizontal: 4,
                     vertical: 2,
                   ),
-                  sliver: SliverToBoxAdapter(
-                    child: ControlCard(
-                      title: 'Aire acondicionado',
-                      icon: Icons.ac_unit_rounded,
-                      isOpen: _acOn,
-                      onToggle: () => setState(() => _acOn = !_acOn),
-                      typeLabel: 'A/C',
-                      activeColor: theme.colorScheme.primary,
-                    ),
+                  sliver: SliverGrid(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 10,
+                          childAspectRatio: 0.95,
+                        ),
+                    delegate: SliverChildListDelegate([
+                      ControlCard(
+                        title: 'Aire acondicionado',
+                        icon: Icons.ac_unit_rounded,
+                        isOpen: _acOn,
+                        onToggle: () => setState(() => _acOn = !_acOn),
+                        typeLabel: 'A/C',
+                        activeColor: theme.colorScheme.primary,
+                      ),
+                      ControlCard(
+                        title: 'Regadores',
+                        icon: Icons.grass_rounded,
+                        isOpen: _sprinklersOn,
+                        onToggle: () => setState(() => _sprinklersOn = !_sprinklersOn),
+                        typeLabel: 'Regadores',
+                        activeColor: Colors.green,
+                      ),
+                      ControlCard(
+                        title: 'Pantalla Temperatura',
+                        icon: Icons.thermostat_rounded,
+                        isOpen: _showTemperature,
+                        onToggle: () => setState(() => _showTemperature = !_showTemperature),
+                        typeLabel: 'Temperatura',
+                        activeColor: Colors.orange,
+                      ),
+                    ]),
                   ),
                 ),
                 SliverPadding(
@@ -288,7 +319,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           crossAxisCount: 2,
                           crossAxisSpacing: 10,
                           mainAxisSpacing: 10,
-                          childAspectRatio: 0.95,
+                          childAspectRatio: 0.85,
                         ),
                     delegate: SliverChildListDelegate([
                       ControlCard(
@@ -339,7 +370,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                     delegate: SliverChildListDelegate([
                       ControlCard(
-                        title: 'Ventana del Salón',
+                        title: 'Ventana Comedor',
                         icon: Icons.window_rounded,
                         isOpen: _livingWindowOpen,
                         onToggle: () => setState(
@@ -349,11 +380,21 @@ class _HomeScreenState extends State<HomeScreen> {
                         activeColor: theme.colorScheme.primary,
                       ),
                       ControlCard(
-                        title: 'Ventana Dormitorio',
+                        title: 'Ventana Dormitorio 1',
                         icon: Icons.sensor_window_rounded,
                         isOpen: _bedroomWindowOpen,
                         onToggle: () => setState(
                           () => _bedroomWindowOpen = !_bedroomWindowOpen,
+                        ),
+                        typeLabel: 'Ventana',
+                        activeColor: theme.colorScheme.primary,
+                      ),
+                      ControlCard(
+                        title: 'Ventana Dormitorio 2',
+                        icon: Icons.sensor_window_rounded,
+                        isOpen: _bedroom2WindowOpen,
+                        onToggle: () => setState(
+                          () => _bedroom2WindowOpen = !_bedroom2WindowOpen,
                         ),
                         typeLabel: 'Ventana',
                         activeColor: theme.colorScheme.primary,
@@ -380,65 +421,24 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (i) => setState(() => _currentIndex = i),
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded),
-            label: 'Inicio',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings_rounded),
-            label: 'Ajustes',
-          ),
-        ],
-      ),
-      floatingActionButton: _currentIndex == 1
-          ? null
-          : Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                FloatingActionButton.extended(
-                  onPressed: () => setState(() => _acOn = !_acOn),
-                  label: Text(_acOn ? 'Apagar A/C' : 'Encender A/C'),
-                  icon: Icon(
-                    _acOn ? Icons.power_settings_new : Icons.ac_unit_rounded,
-                  ),
-                  heroTag: 'acButton',
-                ),
-                const SizedBox(height: 12),
-                _QuickAllButton(
-                  allClosed: _allClosed,
-                  onAction: () => setState(() {
-                    if (_allClosed) {
-                      _mainDoorOpen = true;
-                      _garageDoorOpen = true;
-                      _livingWindowOpen = true;
-                      _bedroomWindowOpen = true;
-                      _acOn = true;
-                    } else {
-                      _mainDoorOpen = false;
-                      _garageDoorOpen = false;
-                      _livingWindowOpen = false;
-                      _bedroomWindowOpen = false;
-                      _acOn = false;
-                    }
-                  }),
-                ),
-              ],
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home_rounded),
+              label: 'Inicio',
             ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-    );
+            NavigationDestination(
+              icon: Icon(Icons.settings_outlined),
+              selectedIcon: Icon(Icons.settings_rounded),
+              label: 'Ajustes',
+            ),
+          ],
+        ),
+      );
+    }
   }
 
-  bool get _allClosed =>
-      !_mainDoorOpen &&
-      !_garageDoorOpen &&
-      !_livingWindowOpen &&
-      !_bedroomWindowOpen &&
-      !_acOn;
-}
 
 class SettingsScreen extends StatelessWidget {
   final VoidCallback onChangeTheme;
@@ -656,7 +656,7 @@ class ControlCard extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       elevation: 4,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 10),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10), // antes vertical: 16
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -691,22 +691,23 @@ class ControlCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             SizedBox(
-              width: 48,
-              height: 38,
+              width: 38, // antes 48
+              height: 32, // antes 38
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: color,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10), // antes 12
                   ),
                   padding: EdgeInsets.zero,
                   elevation: isOpen ? 6 : 2,
+                  minimumSize: const Size(32, 32), // asegura área táctil mínima
                 ),
                 onPressed: onToggle,
                 child: Icon(
                   isOpen ? Icons.toggle_on_rounded : Icons.toggle_off_rounded,
-                  size: 32,
+                  size: 24, // antes 32
                 ),
               ),
             ),

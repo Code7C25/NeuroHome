@@ -90,6 +90,22 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isRegister = false;
+  String? _errorMessage; // Nueva variable para mostrar errores
+
+  void _tryLogin() {
+    setState(() {
+      _errorMessage = null;
+    });
+    final user = _emailController.text.trim();
+    final pass = _passwordController.text.trim();
+    if (user == "user" && pass == "1111") {
+      widget.onLogin();
+    } else {
+      setState(() {
+        _errorMessage = "Usuario o contraseña incorrectos";
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -127,11 +143,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     TextField(
                       controller: _emailController,
                       decoration: InputDecoration(
-                        labelText: 'Correo electrónico',
+                        labelText: 'Usuario',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        prefixIcon: const Icon(Icons.email_rounded),
+                        prefixIcon: const Icon(Icons.person_rounded),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -146,6 +162,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         prefixIcon: const Icon(Icons.lock_rounded),
                       ),
                     ),
+                    if (_errorMessage != null) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        _errorMessage!,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    ],
                     const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
@@ -160,9 +183,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderRadius: BorderRadius.circular(14),
                           ),
                         ),
-                        onPressed: () {
-                          widget.onLogin();
-                        },
+                        onPressed: _tryLogin,
                         child: Text(
                           _isRegister ? 'Registrarse' : 'Iniciar sesión',
                         ),
@@ -481,7 +502,73 @@ class SettingsScreen extends StatelessWidget {
             );
           },
         ),
+        const Divider(),
+        ListTile(
+          leading: const Icon(Icons.devices_other_rounded),
+          title: const Text('Conectar dispositivos'),
+          subtitle: const Text('Cámaras, sensores y más'),
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const DeviceConnectionScreen(),
+              ),
+            );
+          },
+        ),
       ],
+    );
+  }
+}
+
+// Nueva pantalla para conectar dispositivos
+class DeviceConnectionScreen extends StatelessWidget {
+  const DeviceConnectionScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Conectar dispositivos'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Conexión de cámaras y sensores',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 18),
+            const Text(
+              'Aquí podrás conectar y configurar tus cámaras, sensores y otros dispositivos inteligentes compatibles con NeuroHome.',
+            ),
+            const SizedBox(height: 30),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.camera_alt_rounded),
+              label: const Text('Agregar cámara'),
+              onPressed: () {
+                // Aquí iría la lógica para conectar una cámara
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Funcionalidad próximamente')),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.sensors_rounded),
+              label: const Text('Agregar sensor'),
+              onPressed: () {
+                // Aquí iría la lógica para conectar un sensor
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Funcionalidad próximamente')),
+                );
+              },
+            ),
+            // Puedes agregar más botones para otros dispositivos aquí
+          ],
+        ),
+      ),
     );
   }
 }
@@ -610,6 +697,7 @@ class _GlowCircle extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _QuickAllButton extends StatelessWidget {
   const _QuickAllButton({required this.allClosed, required this.onAction});
   final bool allClosed;

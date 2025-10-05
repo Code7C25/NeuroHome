@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static const LinearGradient heroGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [
-      Color(0xFF6EE7B7), // Verde menta
-      Color(0xFF3B82F6), // Azul activo
-      Color(0xFFF472B6), // Rosa vibrante
-    ],
-  );
+    static const LinearGradient heroGradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        Color(0xFF6EE7B7), // Verde menta
+        Color(0xFF3B82F6), // Azul activo
+        Color(0xFFF472B6), // Rosa vibrante
+      ],
+    );
 }
 
 void main() {
@@ -26,6 +26,11 @@ class _MainAppState extends State<MainApp> {
   ThemeMode _themeMode = ThemeMode.light;
   bool _loggedIn = false;
 
+  // NUEVO: Datos de usuario
+  String? _userEmail;
+  String? _userName;
+  String? _userUsername;
+
   void _toggleTheme() {
     setState(() {
       _themeMode = _themeMode == ThemeMode.light
@@ -37,6 +42,26 @@ class _MainAppState extends State<MainApp> {
   void _onLogin() {
     setState(() {
       _loggedIn = true;
+    });
+  }
+
+  // NUEVO: Recibe datos de registro
+  void _onRegister({
+    required String email,
+    required String name,
+    required String username,
+  }) {
+    setState(() {
+      _userEmail = email;
+      _userName = name;
+      _userUsername = username;
+      _loggedIn = true;
+    });
+  }
+
+  void _onLogout() {
+    setState(() {
+      _loggedIn = false;
     });
   }
 
@@ -72,15 +97,37 @@ class _MainAppState extends State<MainApp> {
       darkTheme: ThemeData.dark(),
       themeMode: _themeMode,
       home: _loggedIn
-          ? HomeScreen(onChangeTheme: _toggleTheme)
-          : LoginScreen(onLogin: _onLogin),
+          ? HomeScreen(
+              onChangeTheme: _toggleTheme,
+              onLogout: _onLogout,
+              userEmail: _userEmail,
+              userName: _userName,
+              userUsername: _userUsername,
+            )
+          : LoginScreen(
+              onLogin: _onLogin,
+              onChangeTheme: _toggleTheme,
+              onRegister: _onRegister, // NUEVO
+            ),
     );
   }
 }
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback onLogin;
-  const LoginScreen({super.key, required this.onLogin});
+  final VoidCallback onChangeTheme;
+  final void Function({
+    required String email,
+    required String name,
+    required String username,
+  })? onRegister; // NUEVO
+
+  const LoginScreen({
+    super.key,
+    required this.onLogin,
+    required this.onChangeTheme,
+    this.onRegister,
+  });
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -89,8 +136,12 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _registerEmailController = TextEditingController();
+  final TextEditingController _registerNameController = TextEditingController();
+  final TextEditingController _registerPasswordController = TextEditingController();
+  final TextEditingController _registerUserController = TextEditingController();
   bool _isRegister = false;
-  String? _errorMessage; // Nueva variable para mostrar errores
+  String? _errorMessage;
 
   void _tryLogin() {
     setState(() {
@@ -105,6 +156,39 @@ class _LoginScreenState extends State<LoginScreen> {
         _errorMessage = "Usuario o contraseña incorrectos";
       });
     }
+  }
+
+  void _tryRegister() {
+    setState(() {
+      _errorMessage = null;
+    });
+    if (_registerEmailController.text.isEmpty ||
+        _registerNameController.text.isEmpty ||
+        _registerPasswordController.text.isEmpty ||
+        _registerUserController.text.isEmpty) {
+      setState(() {
+        _errorMessage = "Completa todos los campos";
+      });
+      return;
+    }
+    // Simula registro exitoso y pasa datos al estado principal
+    widget.onRegister?.call(
+      email: _registerEmailController.text.trim(),
+      name: _registerNameController.text.trim(),
+      username: _registerUserController.text.trim(),
+    );
+    // Al volver a login, autocompleta usuario y limpia contraseña
+    setState(() {
+      _isRegister = false;
+      _emailController.text = _registerUserController.text.trim();
+      _passwordController.clear();
+      _errorMessage = "¡Registro exitoso! Ahora inicia sesión.";
+    });
+    // Limpia los campos de registro
+    _registerEmailController.clear();
+    _registerNameController.clear();
+    _registerPasswordController.clear();
+    _registerUserController.clear();
   }
 
   @override
@@ -125,10 +209,41 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      Icons.home_rounded,
-                      size: 56,
-                      color: Theme.of(context).colorScheme.primary,
+                    Center(
+                      child: Container(
+                        width: 110,
+                        height: 110,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.white,
+                              Theme.of(context).colorScheme.primary.withOpacity(0.15),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Theme.of(context).colorScheme.primary.withOpacity(0.25),
+                              blurRadius: 18,
+                              spreadRadius: 2,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.primary,
+                            width: 2,
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Image.asset(
+                            'assets/logo.png',
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 16),
                     Text(
@@ -140,33 +255,85 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                     ),
                     const SizedBox(height: 24),
-                    TextField(
-                      controller: _emailController,
-                      decoration: InputDecoration(
-                        labelText: 'Usuario',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
+                    if (_isRegister) ...[
+                      TextField(
+                        controller: _registerEmailController,
+                        decoration: InputDecoration(
+                          labelText: 'Correo electrónico',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          prefixIcon: const Icon(Icons.email_rounded),
                         ),
-                        prefixIcon: const Icon(Icons.person_rounded),
+                        keyboardType: TextInputType.emailAddress,
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: _passwordController,
-                      obscureText: true,
-                      decoration: InputDecoration(
-                        labelText: 'Contraseña',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _registerNameController,
+                        decoration: InputDecoration(
+                          labelText: 'Nombre completo',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          prefixIcon: const Icon(Icons.person_rounded),
                         ),
-                        prefixIcon: const Icon(Icons.lock_rounded),
                       ),
-                    ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _registerUserController,
+                        decoration: InputDecoration(
+                          labelText: 'Usuario',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          prefixIcon: const Icon(Icons.account_circle_rounded),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _registerPasswordController,
+                        obscureText: true,
+                        decoration: InputDecoration(
+                          labelText: 'Contraseña',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          prefixIcon: const Icon(Icons.lock_rounded),
+                        ),
+                      ),
+                    ] else ...[
+                      TextField(
+                        controller: _emailController,
+                        decoration: InputDecoration(
+                          labelText: 'Usuario',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          prefixIcon: const Icon(Icons.person_rounded),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _passwordController,
+                        obscureText: true,
+                        decoration: InputDecoration(
+                          labelText: 'Contraseña',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          prefixIcon: const Icon(Icons.lock_rounded),
+                        ),
+                      ),
+                    ],
                     if (_errorMessage != null) ...[
                       const SizedBox(height: 12),
                       Text(
                         _errorMessage!,
-                        style: const TextStyle(color: Colors.red),
+                        style: TextStyle(
+                          color: _errorMessage == "¡Registro exitoso! Ahora inicia sesión."
+                              ? Colors.green
+                              : Colors.red,
+                        ),
                       ),
                     ],
                     const SizedBox(height: 24),
@@ -183,7 +350,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderRadius: BorderRadius.circular(14),
                           ),
                         ),
-                        onPressed: _tryLogin,
+                        onPressed: _isRegister ? _tryRegister : _tryLogin,
                         child: Text(
                           _isRegister ? 'Registrarse' : 'Iniciar sesión',
                         ),
@@ -193,12 +360,27 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: () {
                         setState(() {
                           _isRegister = !_isRegister;
+                          _errorMessage = null;
                         });
                       },
                       child: Text(
                         _isRegister
                             ? '¿Ya tienes cuenta? Inicia sesión'
                             : '¿No tienes cuenta? Regístrate',
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: widget.onChangeTheme,
+                      icon: const Icon(Icons.color_lens_rounded),
+                      label: const Text('Cambiar tema'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.secondary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                       ),
                     ),
                   ],
@@ -214,7 +396,19 @@ class _LoginScreenState extends State<LoginScreen> {
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback onChangeTheme;
-  const HomeScreen({super.key, required this.onChangeTheme});
+  final VoidCallback onLogout;
+  final String? userEmail;
+  final String? userName;
+  final String? userUsername;
+
+  const HomeScreen({
+    super.key,
+    required this.onChangeTheme,
+    required this.onLogout,
+    this.userEmail,
+    this.userName,
+    this.userUsername,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -238,7 +432,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
     Widget body;
     if (_currentIndex == 1) {
-      body = SettingsScreen(onChangeTheme: widget.onChangeTheme);
+      body = SettingsScreen(
+        onChangeTheme: widget.onChangeTheme,
+        onLogout: widget.onLogout,
+        userEmail: widget.userEmail,
+        userName: widget.userName,
+        userUsername: widget.userUsername,
+      );
     } else {
       body = Stack(
         children: [
@@ -252,16 +452,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: _HeroBanner(
                     title: 'Controla tu hogar',
                     subtitle: 'Puertas, ventanas y aire acondicionado',
-                    onQuickAction: () => setState(() {
-                      _mainDoorOpen = false;
-                      _garageDoorOpen = false;
-                      _livingWindowOpen = false;
-                      _bedroomWindowOpen = false;
-                      _bedroom2WindowOpen = false;
-                      _acOn = false;
-                      _sprinklersOn = false;
-                      _showTemperature = false;
-                    }),
                   ),
                 ),
                 SliverPadding(
@@ -442,28 +632,42 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (i) => setState(() => _currentIndex = i),
-          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home_rounded),
-              label: 'Inicio',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.settings_outlined),
-              selectedIcon: Icon(Icons.settings_rounded),
-              label: 'Ajustes',
-            ),
-          ],
-        ),
-      );
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home_rounded),
+            label: 'Inicio',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings_rounded),
+            label: 'Ajustes',
+          ),
+        ],
+      ),
+    );
     }
   }
 
 
+
+
 class SettingsScreen extends StatelessWidget {
   final VoidCallback onChangeTheme;
-  const SettingsScreen({super.key, required this.onChangeTheme});
+  final VoidCallback onLogout;
+  final String? userEmail;
+  final String? userName;
+  final String? userUsername;
+
+  const SettingsScreen({
+    super.key,
+    required this.onChangeTheme,
+    required this.onLogout,
+    this.userEmail,
+    this.userName,
+    this.userUsername,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -485,19 +689,48 @@ class SettingsScreen extends StatelessWidget {
           title: const Text('Datos de cuenta'),
           subtitle: const Text('Ver o editar información de tu cuenta'),
           onTap: () {
-            showDialog(
+            showModalBottomSheet(
               context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('Datos de cuenta'),
-                content: const Text(
-                  'Aquí irían los datos de la cuenta del usuario.',
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              builder: (context) => Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Center(
+                      child: Icon(Icons.account_circle_rounded, size: 60),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Correo electrónico:',
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                    Text(userEmail ?? 'No registrado'),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Nombre completo:',
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                    Text(userName ?? 'No registrado'),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Usuario:',
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                    Text(userUsername ?? 'No registrado'),
+                    const SizedBox(height: 24),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cerrar'),
+                      ),
+                    ),
+                  ],
                 ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cerrar'),
-                  ),
-                ],
               ),
             );
           },
@@ -513,6 +746,34 @@ class SettingsScreen extends StatelessWidget {
                 builder: (context) => const DeviceConnectionScreen(),
               ),
             );
+          },
+        ),
+        const Divider(),
+        // Opción para cerrar sesión
+        ListTile(
+          leading: const Icon(Icons.logout_rounded, color: Colors.red),
+          title: const Text('Cerrar sesión', style: TextStyle(color: Colors.red)),
+          onTap: () async {
+            final confirm = await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('¿Cerrar sesión?'),
+                content: const Text('¿Estás seguro de que deseas cerrar la sesión?'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Cancelar'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('Cerrar sesión'),
+                  ),
+                ],
+              ),
+            );
+            if (confirm == true) {
+              onLogout();
+            }
           },
         ),
       ],
@@ -577,12 +838,10 @@ class _HeroBanner extends StatelessWidget {
   const _HeroBanner({
     required this.title,
     required this.subtitle,
-    required this.onQuickAction,
   });
 
   final String title;
   final String subtitle;
-  final VoidCallback onQuickAction;
 
   @override
   Widget build(BuildContext context) {
@@ -640,32 +899,36 @@ class _HeroBanner extends StatelessWidget {
                                 color: Colors.white70,
                               ),
                             ),
-                            const Spacer(),
-                            ElevatedButton.icon(
-                              onPressed: onQuickAction,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: theme.colorScheme.secondary,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 10,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                              ),
-                              icon: const Icon(Icons.lock_rounded),
-                              label: const Text('Cerrar todo'),
-                            ),
                           ],
                         ),
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Icon(
-                      Icons.shield_moon_rounded,
-                      size: 72,
-                      color: theme.colorScheme.primary.withOpacity(0.7),
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withOpacity(0.85),
+                        border: Border.all(
+                          color: theme.colorScheme.primary.withOpacity(0.5),
+                          width: 1.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: theme.colorScheme.primary.withOpacity(0.15),
+                            blurRadius: 8,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(6.0),
+                        child: Image.asset(
+                          'assets/logo.png',
+                          fit: BoxFit.contain,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -742,64 +1005,39 @@ class ControlCard extends StatelessWidget {
         : Colors.grey.shade400;
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10), // antes vertical: 16
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
-                shape: BoxShape.circle,
-              ),
-              padding: const EdgeInsets.all(10),
-              child: Icon(icon, size: 38, color: color),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              title,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.primary,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              isOpen ? '$typeLabel activa' : '$typeLabel desactivada',
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: color,
-                fontSize: 14,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: 38, // antes 48
-              height: 32, // antes 38
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: color,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10), // antes 12
-                  ),
-                  padding: EdgeInsets.zero,
-                  elevation: isOpen ? 6 : 2,
-                  minimumSize: const Size(32, 32), // asegura área táctil mínima
+      child: InkWell(
+        onTap: onToggle,
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 40, color: color),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.bold,
                 ),
-                onPressed: onToggle,
-                child: Icon(
-                  isOpen ? Icons.toggle_on_rounded : Icons.toggle_off_rounded,
-                  size: 24, // antes 32
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                isOpen ? 'Abierto' : 'Cerrado',
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 4),
+              Text(
+                typeLabel,
+                style: theme.textTheme.bodySmall,
+              ),
+            ],
+          ),
         ),
       ),
     );

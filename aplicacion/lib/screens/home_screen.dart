@@ -5,7 +5,7 @@ import 'settings_screen.dart';
 import '../widgets/hero_banner.dart';
 import '../widgets/control_card.dart';
 import '../services/token_storage.dart'; // <-- importar TokenStorage
-import 'test_connection_screen.dart'; // <-- importar TestConnectionScreen
+
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback onChangeTheme;
@@ -256,20 +256,7 @@ class _HomeScreenState extends State<HomeScreen> {
   backgroundColor: Colors.transparent,
   elevation: 0,
   actions: [
-    // Botón de prueba de conexión - NUEVO
-    IconButton(
-      icon: const Icon(Icons.wifi_find_rounded),
-      tooltip: 'Probar conexión',
-      onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => TestConnectionScreen(locale: widget.locale),
-          ),
-        );
-      },
-    ),
-    // Botón existente - NO BORRAR
+       // Botón existente - NO BORRAR
     IconButton(
       icon: const Icon(Icons.logout_rounded),
       tooltip: 'Cerrar sesión',

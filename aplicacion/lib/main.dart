@@ -50,10 +50,16 @@ class _MainAppState extends State<MainApp> {
       darkTheme: AppTheme.darkTheme,
       themeMode: _themeMode,
       home: _loggedIn
-          ? HomeScreen(
-              onChangeTheme: _toggleTheme,
-              onLogout: _onLogout, // <-- pasar callback de logout
-            )
+    ? HomeScreen(
+        onChangeTheme: _toggleTheme,
+        onLogout: _onLogout,
+        locale: _locale, // ← AGREGAR ESTA LÍNEA
+        onChangeLocale: _toggleLocale, // ← AGREGAR ESTA LÍNEA
+        userEmail: _userEmail, // ← AGREGAR ESTA LÍNEA (opcional)
+        userName: _userName, // ← AGREGAR ESTA LÍNEA (opcional)
+        userUsername: _userUsername, // ← AGREGAR ESTA LÍNEA (opcional)
+      )
+
           : LoginScreen(
               onLogin: _onLogin, // <-- pasar callback para iniciar sesión
               onChangeTheme: _toggleTheme,

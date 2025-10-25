@@ -1,0 +1,166 @@
+#include <SPI.h>
+#include <MFRC522.h>
+#include <Servo.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+#include "DHT.h"
+
+// ==== PINES ====
+#define SS_PIN    10
+#define RST_PIN   9
+#define SERVO_PIN 3
+#define DHT_PIN   2
+#define RED_PIN   5
+#define GREEN_PIN 6
+#define BLUE_PIN  7
+
+// ==== CONFIGURACIONES ====
+#define DHTTYPE DHT11
+DHT dht(DHT_PIN, DHTTYPE);
+MFRC522 mfrc522(SS_PIN, RST_PIN);
+Servo servo;
+LiquidCrystal_I2C lcd(0x27, 16, 2); // Cambia a 0x3F si tu pantalla no muestra nada
+
+// ==== TARJETA AUTORIZADA ====
+const String tarjetaAutorizada = "8CE2A700"; // UID en mayúsculas
+
+// ==== SERVO ====
+const int POS_CERRADA = 0;
+const int POS_ABIERTA = 90;
+const int STEP_DELAY_MS = 12;
+const int STEP_SIZE = 1;
+
+// ==== TIEMPOS ====
+const unsigned long TIEMPO_ABIERTA_MS = 4000;
+const unsigned long COOLDOWN_MS = 3000;
+unsigned long ultimoAcceso = 0;
+
+void setup() {
+  Serial.begin(9600);
+  SPI.begin();
+  mfrc522.PCD_Init();
+  servo.attach(SERVO_PIN);
+  servo.write(POS_CERRADA);
+  dht.begin();
+
+  pinMode(RED_PIN, OUTPUT);
+  pinMode(GREEN_PIN, OUTPUT);
+  pinMode(BLUE_PIN, OUTPUT);
+
+  lcd.init();
+  lcd.backlight();
+
+  lcd.setCursor(0, 0);
+  lcd.print("Sistema RFID+DHT");
+  lcd.setCursor(0, 1);
+  lcd.print("Iniciando...");
+  delay(2000);
+  lcd.clear();
+}
+
+void loop() {
+  // Mostrar temperatura, humedad y color RGB
+  mostrarDHTyColor();
+
+  // === RFID ===
+  if (!mfrc522.PICC_IsNewCardPresent()) return;
+  if (!mfrc522.PICC_ReadCardSerial()) return;
+
+  // Construir UID
+  String uidString = "";
+  for (byte i = 0; i < mfrc522.uid.size; i++) {
+    if (mfrc522.uid.uidByte[i] < 0x10) uidString += "0";
+    uidString += String(mfrc522.uid.uidByte[i], HEX);
+  }
+  uidString.toUpperCase();
+
+  Serial.print("UID detectado: ");
+  Serial.println(uidString);
+
+  unsigned long ahora = millis();
+
+  if (uidString == tarjetaAutorizada) {
+    if (ahora - ultimoAcceso >= COOLDOWN_MS) {
+      accesoPermitido();
+      abrirPuertaSuave();
+      delay(TIEMPO_ABIERTA_MS);
+      cerrarPuertaSuave();
+      ultimoAcceso = ahora;
+    } else {
+      Serial.println("Cooldown activo");
+    }
+  } else {
+    accesoDenegado();
+  }
+
+  mfrc522.PICC_HaltA();
+  mfrc522.PCD_StopCrypto1();
+}
+
+// === FUNCIONES SERVO ===
+void abrirPuertaSuave() {
+  for (int pos = POS_CERRADA; pos <= POS_ABIERTA; pos += STEP_SIZE) {
+    servo.write(pos);
+    delay(STEP_DELAY_MS);
+  }
+}
+
+void cerrarPuertaSuave() {
+  for (int pos = POS_ABIERTA; pos >= POS_CERRADA; pos -= STEP_SIZE) {
+    servo.write(pos);
+    delay(STEP_DELAY_MS);
+  }
+}
+
+// === MENSAJES LCD ===
+void accesoPermitido() {
+  Serial.println("? Tarjeta autorizada");
+  lcd.setCursor(0, 1);
+  lcd.print("ACCESO PERMITIDO ");
+  delay(2000);
+  lcd.setCursor(0, 1);
+  lcd.print("                 ");
+}
+
+void accesoDenegado() {
+  Serial.println("? Tarjeta no autorizada");
+  lcd.setCursor(0, 1);
+  lcd.print("ACCESO DENEGADO  ");
+  delay(2000);
+  lcd.setCursor(0, 1);
+  lcd.print("                 ");
+}
+
+// === LED RGB KY-016 CÁTODO COMÚN ===
+void setColor(int red, int green, int blue) {
+  analogWrite(RED_PIN, red);
+  analogWrite(GREEN_PIN, green);
+  analogWrite(BLUE_PIN, blue);
+}
+
+// === SENSOR DHT11 ===
+void mostrarDHTyColor() {
+  float t = dht.readTemperature();
+  float h = dht.readHumidity();
+
+  if (isnan(t) || isnan(h)) return;
+
+  // Mostrar en LCD (línea 0)
+  lcd.setCursor(0, 0);
+  lcd.print("T:");
+  lcd.print(t, 1);
+  lcd.print((char)223);
+  lcd.print("C H:");
+  lcd.print(h, 0);
+  lcd.print("% ");
+
+  // Cambiar color LED según temperatura
+  if (t < 20) {
+    setColor(0, 0, 255);   // Azul = frío
+  } else if (t >= 20 && t <= 28) {
+    setColor(0, 255, 0);   // Verde = templado
+  } else {
+    setColor(255, 0, 0);   // Rojo = caliente
+  }
+}
+

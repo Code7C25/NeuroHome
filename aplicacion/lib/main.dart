@@ -18,7 +18,6 @@ class _MainAppState extends State<MainApp> {
   bool _loggedIn = false;
   String _locale = 'es';
 
-  String? _userEmail;
   String? _userName;
   String? _userUsername;
 
@@ -32,16 +31,27 @@ class _MainAppState extends State<MainApp> {
 
   void _onLogin() => setState(() => _loggedIn = true);
 
+  void _onLoginWithData(Map<String, dynamic> userData) {
+    setState(() {
+      _userName = userData['name'];
+      _userUsername = userData['username'];
+      _loggedIn = true;
+    });
+  }
+
   void _onRegister({required String email, required String name, required String username}) {
     setState(() {
-      _userEmail = email;
       _userName = name;
       _userUsername = username;
       _loggedIn = true;
     });
   }
 
-  void _onLogout() => setState(() => _loggedIn = false);
+  void _onLogout() => setState(() {
+    _loggedIn = false;
+    _userName = null;
+    _userUsername = null;
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -50,18 +60,17 @@ class _MainAppState extends State<MainApp> {
       darkTheme: AppTheme.darkTheme,
       themeMode: _themeMode,
       home: _loggedIn
-    ? HomeScreen(
-        onChangeTheme: _toggleTheme,
-        onLogout: _onLogout,
-        locale: _locale, // ← AGREGAR ESTA LÍNEA
-        onChangeLocale: _toggleLocale, // ← AGREGAR ESTA LÍNEA
-        userEmail: _userEmail, // ← AGREGAR ESTA LÍNEA (opcional)
-        userName: _userName, // ← AGREGAR ESTA LÍNEA (opcional)
-        userUsername: _userUsername, // ← AGREGAR ESTA LÍNEA (opcional)
-      )
-
+          ? HomeScreen(
+              onChangeTheme: _toggleTheme,
+              onLogout: _onLogout,
+              locale: _locale,
+              onChangeLocale: _toggleLocale,
+              userName: _userName,
+              userUsername: _userUsername,
+            )
           : LoginScreen(
-              onLogin: _onLogin, // <-- pasar callback para iniciar sesión
+              onLogin: _onLogin,
+              onLoginWithData: _onLoginWithData,
               onChangeTheme: _toggleTheme,
               onRegister: _onRegister,
               locale: _locale,

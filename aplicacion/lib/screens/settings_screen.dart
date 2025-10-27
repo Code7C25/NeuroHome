@@ -5,7 +5,6 @@ import 'device_connection_screen.dart';
 class SettingsScreen extends StatelessWidget {
   final VoidCallback onChangeTheme;
   final VoidCallback onLogout;
-  final String? userEmail;
   final String? userName;
   final String? userUsername;
   final String locale;
@@ -15,7 +14,6 @@ class SettingsScreen extends StatelessWidget {
     super.key,
     required this.onChangeTheme,
     required this.onLogout,
-    required this.userEmail,
     required this.userName,
     required this.userUsername,
     required this.locale,
@@ -70,12 +68,6 @@ class SettingsScreen extends StatelessWidget {
                       child: Icon(Icons.account_circle_rounded, size: 60),
                     ),
                     const SizedBox(height: 16),
-                    Text(
-                      t('email_label', locale),
-                      style: Theme.of(context).textTheme.labelLarge,
-                    ),
-                    Text(userEmail ?? t('no_account', locale)),
-                    const SizedBox(height: 12),
                     Text(
                       t('name_label', locale),
                       style: Theme.of(context).textTheme.labelLarge,

@@ -6,6 +6,7 @@ import '../services/token_storage.dart';
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback onLogin;
+  final Function(Map<String, dynamic>)? onLoginWithData;
   final VoidCallback onChangeTheme;
   final void Function({
     required String email,
@@ -13,9 +14,11 @@ class LoginScreen extends StatefulWidget {
     required String username,
   })? onRegister;
   final String locale;
+  
   const LoginScreen({
     super.key,
     required this.onLogin,
+    this.onLoginWithData,
     required this.onChangeTheme,
     required this.onRegister,
     required this.locale,
@@ -56,9 +59,22 @@ class _LoginScreenState extends State<LoginScreen> {
       final result = await AuthService.login(username, password);
       
       if (result['ok'] == true) {
-        // Guardar token y hacer login
+        // Guardar token
         await TokenStorage.save(result['data']['token']);
-        widget.onLogin();
+        
+        // Obtener datos del usuario de la respuesta
+        final userData = result['data']['user'];
+        
+        // Usar el nuevo callback si está disponible, sino el antiguo
+        if (widget.onLoginWithData != null) {
+          widget.onLoginWithData!({
+            'email': userData['email'] ?? '',
+            'name': userData['name'] ?? '',
+            'username': userData['username'] ?? username,
+          });
+        } else {
+          widget.onLogin();
+        }
       } else {
         setState(() {
           _errorMessage = result['message'] ?? t('wrong_user_pass', widget.locale);

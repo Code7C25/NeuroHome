@@ -4,15 +4,13 @@ import '../localization.dart';
 import 'settings_screen.dart';
 import '../widgets/hero_banner.dart';
 import '../widgets/control_card.dart';
-import '../services/token_storage.dart'; // <-- importar TokenStorage
-
+import '../services/token_storage.dart';
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback onChangeTheme;
-  final VoidCallback? onLogout; // <-- nuevo
-  final String locale; // nuevo: idioma activo
-  final VoidCallback? onChangeLocale; // nuevo: callback para cambiar idioma
-  final String? userEmail; // opcionales: info de usuario
+  final VoidCallback? onLogout;
+  final String locale;
+  final VoidCallback? onChangeLocale;
   final String? userName;
   final String? userUsername;
 
@@ -22,7 +20,6 @@ class HomeScreen extends StatefulWidget {
     this.onLogout,
     this.locale = 'es',
     this.onChangeLocale,
-    this.userEmail,
     this.userName,
     this.userUsername,
   }) : super(key: key);
@@ -52,7 +49,6 @@ class _HomeScreenState extends State<HomeScreen> {
       body = SettingsScreen(
         onChangeTheme: widget.onChangeTheme,
         onLogout: widget.onLogout ?? () {},
-        userEmail: widget.userEmail,
         userName: widget.userName,
         userUsername: widget.userUsername,
         locale: widget.locale,
@@ -252,23 +248,22 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       extendBody: true,
       appBar: AppBar(
-  title: const Text('NeuroHome'),
-  backgroundColor: Colors.transparent,
-  elevation: 0,
-  actions: [
-       // Botón existente - NO BORRAR
-    IconButton(
-      icon: const Icon(Icons.logout_rounded),
-      tooltip: 'Cerrar sesión',
-      onPressed: () async {
-        await TokenStorage.delete();
-        if (widget.onLogout != null) {
-          widget.onLogout!();
-        }
-      },
-    ),
-  ],
-),
+        title: const Text('NeuroHome'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout_rounded),
+            tooltip: 'Cerrar sesión',
+            onPressed: () async {
+              await TokenStorage.delete();
+              if (widget.onLogout != null) {
+                widget.onLogout!();
+              }
+            },
+          ),
+        ],
+      ),
       body: body,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,

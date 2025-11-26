@@ -47,6 +47,23 @@ const Map<String, Map<String, String>> appTexts = {
     'device_connection_title': 'Conectar dispositivos',
     'device_connection_subtitle': 'Conexión de cámaras y sensores',
     'device_connection_desc': 'Aquí podrás conectar y configurar tus cámaras, sensores y otros dispositivos inteligentes compatibles con NeuroHome.',
+    
+    // NUEVAS TRADUCCIONES AGREGADAS
+    'door_alert': 'ALERTA: Puerta principal abierta',
+    'updating_sensors': 'Actualizando datos de sensores...',
+    'security_camera': 'Cámara Seguridad',
+    'temperature': 'Temperatura',
+    'sensor': 'Sensor',
+    'windows_gate': 'Ventanas y Portón',
+    'window': 'Ventana',
+    'gate': 'Portón',
+    'access': 'Acceso',
+    'last_update': 'Actualizado',
+    'sensors_connected': 'Sensores Conectados',
+    'sensors_disconnected': 'Sensores Desconectados',
+    'seconds_ago': 'hace {seconds} seg',
+    'minutes_ago': 'hace {minutes} min',
+    'hours_ago': 'hace {hours} h',
   },
   'en': {
     'login': 'Login',
@@ -96,6 +113,23 @@ const Map<String, Map<String, String>> appTexts = {
     'device_connection_title': 'Connect devices',
     'device_connection_subtitle': 'Camera and sensor connection',
     'device_connection_desc': 'Here you can connect and configure your cameras, sensors and other smart devices compatible with NeuroHome.',
+    
+    // NUEVAS TRADUCCIONES AGREGADAS
+    'door_alert': 'ALERT: Main door opened',
+    'updating_sensors': 'Updating sensor data...',
+    'security_camera': 'Security Camera',
+    'temperature': 'Temperature',
+    'sensor': 'Sensor',
+    'windows_gate': 'Windows and Gate',
+    'window': 'Window',
+    'gate': 'Gate',
+    'access': 'Access',
+    'last_update': 'Last update',
+    'sensors_connected': 'Sensors Connected',
+    'sensors_disconnected': 'Sensors Disconnected',
+    'seconds_ago': '{seconds} seconds ago',
+    'minutes_ago': '{minutes} minutes ago',
+    'hours_ago': '{hours} hours ago',
   }
 };
 

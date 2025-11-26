@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../app_theme.dart';
 import '../localization.dart';
 import 'settings_screen.dart';
+import 'single_camera_screen.dart';
 import '../widgets/hero_banner.dart';
 import '../widgets/control_card.dart';
 import '../services/token_storage.dart';
+import '../services/sensor_service.dart';
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback onChangeTheme;
@@ -29,16 +32,270 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  // Estados para controles manuales
   bool _mainDoorOpen = false;
-  bool _garageDoorOpen = false;
-  bool _livingWindowOpen = false;
-  bool _bedroomWindowOpen = false;
-  bool _bedroom2WindowOpen = false;
-  bool _acOn = false;
-  bool _sprinklersOn = false;
-  bool _showTemperature = false;
+  bool _gateOpen = false;
+  
+  // Datos en tiempo real de sensores
+  double _currentTemperature = 0.0;
+  double _currentHumidity = 0.0;
+  bool _realMainDoor = false;
+  DateTime _lastUpdate = DateTime.now();
+  Timer? _sensorTimer;
+  bool _sensorsConnected = false;
 
   int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSensorData();
+    // Actualizar cada 5 segundos
+    _sensorTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      _loadSensorData();
+    });
+  }
+
+  @override
+  void dispose() {
+    _sensorTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadSensorData() async {
+    try {
+      final result = await SensorService.getSensorData();
+      if (result['ok'] == true && mounted) {
+        final data = result['data'];
+        final previousDoorState = _realMainDoor;
+        
+        setState(() {
+          _currentTemperature = data['temperature']?.toDouble() ?? 0.0;
+          _currentHumidity = data['humidity']?.toDouble() ?? 0.0;
+          _realMainDoor = data['mainDoor'] ?? false;
+          _lastUpdate = DateTime.parse(data['lastUpdate']);
+          _sensorsConnected = true;
+          
+          // Sincronizar estado visual con datos reales
+          _mainDoorOpen = _realMainDoor;
+        });
+        
+        // Mostrar alerta si la puerta se abrió
+        if (_realMainDoor && !previousDoorState) {
+          _showDoorAlert();
+        }
+      } else {
+        setState(() {
+          _sensorsConnected = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _sensorsConnected = false;
+        });
+      }
+    }
+  }
+
+  void _showDoorAlert() {
+    if (!mounted) return;
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '🚨 ${t('door_alert', widget.locale)}',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(
+          label: 'OK',
+          textColor: Colors.white,
+          onPressed: () {},
+        ),
+      ),
+    );
+  }
+
+  void _refreshSensorData() {
+    _loadSensorData();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('📡 ${t('updating_sensors', widget.locale)}'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _navigateToCamera() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SingleCameraScreen(locale: widget.locale),
+      ),
+    );
+  }
+
+  Widget _buildHomeContent(ThemeData theme) {
+    return Stack(
+      children: [
+        Container(
+          decoration: const BoxDecoration(gradient: AppTheme.heroGradient),
+        ),
+        SafeArea(
+          child: CustomScrollView(
+            slivers: [
+              // Banner Hero
+              SliverToBoxAdapter(
+                child: HeroBanner(
+                  title: t('control_home', widget.locale),
+                  subtitle: t('subtitle_home', widget.locale),
+                  locale: widget.locale,
+                ),
+              ),
+              
+              // SECCIÓN: MONITOREO EN VIVO
+              _buildSectionTitle('Cámara y Sensores', theme),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                sliver: SliverGrid(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                    childAspectRatio: 0.95,
+                  ),
+                  delegate: SliverChildListDelegate([
+                    // Cámara de seguridad
+                    ControlCard(
+                      title: t('security_camera', widget.locale),
+                      icon: Icons.videocam_rounded,
+                      isOpen: true,
+                      onToggle: _navigateToCamera,
+                      typeLabel: 'Streaming',
+                      activeColor: Colors.blue,
+                      locale: widget.locale,
+                    ),
+                    // Sensor de temperatura/humedad
+                    ControlCard(
+                      title: t('temperature', widget.locale),
+                      icon: Icons.thermostat_rounded,
+                      isOpen: true,
+                      onToggle: _refreshSensorData,
+                      typeLabel: '${_currentTemperature.toStringAsFixed(1)}°C - ${_currentHumidity.toStringAsFixed(1)}%',
+                      activeColor: _getTemperatureColor(_currentTemperature),
+                      locale: widget.locale,
+                    ),
+                  ]),
+                ),
+              ),
+
+              // Indicador de última actualización
+              _buildLastUpdateIndicator(),
+
+              // SECCIÓN: PUERTAS
+              _buildSectionTitle(t('doors', widget.locale), theme),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                sliver: SliverGrid(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                    childAspectRatio: 0.85,
+                  ),
+                  delegate: SliverChildListDelegate([
+                    ControlCard(
+                      title: t('main_door', widget.locale),
+                      icon: Icons.door_front_door_rounded,
+                      isOpen: _mainDoorOpen,
+                      onToggle: () {
+                        setState(() => _mainDoorOpen = !_mainDoorOpen);
+                        // Aquí podrías enviar comando a Arduino para abrir/cerrar
+                      },
+                      typeLabel: _realMainDoor ? 
+                        '${t('open', widget.locale)} (${t('sensor', widget.locale)})' : 
+                        '${t('closed', widget.locale)} (${t('sensor', widget.locale)})',
+                      activeColor: _mainDoorOpen ? theme.colorScheme.primary : Colors.grey,
+                      locale: widget.locale,
+                    ),
+                  ]),
+                ),
+              ),
+
+              // SECCIÓN: PORTÓN
+              _buildSectionTitle('Portón', theme),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                sliver: SliverGrid(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                    childAspectRatio: 0.95,
+                  ),
+                  delegate: SliverChildListDelegate([
+                    ControlCard(
+                      title: 'Portón',
+                      icon: Icons.fence_rounded,
+                      isOpen: _gateOpen,
+                      onToggle: () => setState(() => _gateOpen = !_gateOpen),
+                      typeLabel: 'Acceso',
+                      activeColor: Colors.green,
+                      locale: widget.locale,
+                    ),
+                  ]),
+                ),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 60)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionTitle(String title, ThemeData theme) {
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+      sliver: SliverToBoxAdapter(
+        child: Text(
+          title,
+          style: theme.textTheme.titleLarge?.copyWith(
+            color: theme.colorScheme.primary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLastUpdateIndicator() {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.update_rounded,
+              size: 16,
+              color: Colors.grey[600],
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '${t('last_update', widget.locale)}: ${_formatLastUpdate()}',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,194 +312,7 @@ class _HomeScreenState extends State<HomeScreen> {
         onChangeLocale: widget.onChangeLocale ?? () {},
       );
     } else {
-      body = Stack(
-        children: [
-          Container(
-            decoration: const BoxDecoration(gradient: AppTheme.heroGradient),
-          ),
-          SafeArea(
-            child: CustomScrollView(
-              slivers: [
-                SliverToBoxAdapter(
-                  child: HeroBanner(
-                    title: t('control_home', widget.locale),
-                    subtitle: t('subtitle_home', widget.locale),
-                    locale: widget.locale,
-                  ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
-                  sliver: SliverToBoxAdapter(
-                    child: Text(
-                      t('air_conditioner', widget.locale) + ' & ' + t('sprinklers', widget.locale),
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 2,
-                  ),
-                  sliver: SliverGrid(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 10,
-                          mainAxisSpacing: 10,
-                          childAspectRatio: 0.95,
-                        ),
-                    delegate: SliverChildListDelegate([
-                      ControlCard(
-                        title: t('air_conditioner', widget.locale),
-                        icon: Icons.ac_unit_rounded,
-                        isOpen: _acOn,
-                        onToggle: () => setState(() => _acOn = !_acOn),
-                        typeLabel: t('air_conditioner', widget.locale),
-                        activeColor: theme.colorScheme.primary,
-                        locale: widget.locale,
-                      ),
-                      ControlCard(
-                        title: t('sprinklers', widget.locale),
-                        icon: Icons.grass_rounded,
-                        isOpen: _sprinklersOn,
-                        onToggle: () => setState(() => _sprinklersOn = !_sprinklersOn),
-                        typeLabel: t('sprinklers', widget.locale),
-                        activeColor: Colors.green,
-                        locale: widget.locale,
-                      ),
-                      ControlCard(
-                        title: t('temperature_screen', widget.locale),
-                        icon: Icons.thermostat_rounded,
-                        isOpen: _showTemperature,
-                        onToggle: () => setState(() => _showTemperature = !_showTemperature),
-                        typeLabel: t('temperature_screen', widget.locale),
-                        activeColor: Colors.orange,
-                        locale: widget.locale,
-                      ),
-                    ]),
-                  ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
-                  sliver: SliverToBoxAdapter(
-                    child: Text(
-                      t('doors', widget.locale),
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 2,
-                  ),
-                  sliver: SliverGrid(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 10,
-                          mainAxisSpacing: 10,
-                          childAspectRatio: 0.85,
-                        ),
-                    delegate: SliverChildListDelegate([
-                      ControlCard(
-                        title: t('main_door', widget.locale),
-                        icon: Icons.door_front_door_rounded,
-                        isOpen: _mainDoorOpen,
-                        onToggle: () =>
-                            setState(() => _mainDoorOpen = !_mainDoorOpen),
-                        typeLabel: t('doors', widget.locale),
-                        activeColor: theme.colorScheme.primary,
-                        locale: widget.locale,
-                      ),
-                      ControlCard(
-                        title: t('garage_door', widget.locale),
-                        icon: Icons.garage_rounded,
-                        isOpen: _garageDoorOpen,
-                        onToggle: () =>
-                            setState(() => _garageDoorOpen = !_garageDoorOpen),
-                        typeLabel: t('doors', widget.locale),
-                        activeColor: theme.colorScheme.primary,
-                        locale: widget.locale,
-                      ),
-                    ]),
-                  ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
-                  sliver: SliverToBoxAdapter(
-                    child: Text(
-                      t('windows', widget.locale),
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 2,
-                  ),
-                  sliver: SliverGrid(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 10,
-                          mainAxisSpacing: 10,
-                          childAspectRatio: 0.95,
-                        ),
-                    delegate: SliverChildListDelegate([
-                      ControlCard(
-                        title: t('living_window', widget.locale),
-                        icon: Icons.window_rounded,
-                        isOpen: _livingWindowOpen,
-                        onToggle: () => setState(
-                          () => _livingWindowOpen = !_livingWindowOpen,
-                        ),
-                        typeLabel: t('windows', widget.locale),
-                        activeColor: theme.colorScheme.primary,
-                        locale: widget.locale,
-                      ),
-                      ControlCard(
-                        title: t('bedroom1_window', widget.locale),
-                        icon: Icons.sensor_window_rounded,
-                        isOpen: _bedroomWindowOpen,
-                        onToggle: () => setState(
-                          () => _bedroomWindowOpen = !_bedroomWindowOpen,
-                        ),
-                        typeLabel: t('windows', widget.locale),
-                        activeColor: theme.colorScheme.primary,
-                        locale: widget.locale,
-                      ),
-                      ControlCard(
-                        title: t('bedroom2_window', widget.locale),
-                        icon: Icons.sensor_window_rounded,
-                        isOpen: _bedroom2WindowOpen,
-                        onToggle: () => setState(
-                          () => _bedroom2WindowOpen = !_bedroom2WindowOpen,
-                        ),
-                        typeLabel: t('windows', widget.locale),
-                        activeColor: theme.colorScheme.primary,
-                        locale: widget.locale,
-                      ),
-                    ]),
-                  ),
-                ),
-                const SliverToBoxAdapter(child: SizedBox(height: 60)),
-              ],
-            ),
-          ),
-        ],
-      );
+      body = _buildHomeContent(theme);
     }
 
     return Scaffold(
@@ -252,9 +322,20 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
+          // Indicador de conexión con sensores
+          IconButton(
+            icon: Icon(
+              _sensorsConnected ? Icons.sensors_rounded : Icons.sensors_off_rounded,
+              color: _sensorsConnected ? Colors.green : Colors.grey,
+            ),
+            tooltip: _sensorsConnected ? 
+              '${t('sensors_connected', widget.locale)}' : 
+              '${t('sensors_disconnected', widget.locale)}',
+            onPressed: _refreshSensorData,
+          ),
           IconButton(
             icon: const Icon(Icons.logout_rounded),
-            tooltip: 'Cerrar sesión',
+            tooltip: t('logout', widget.locale),
             onPressed: () async {
               await TokenStorage.delete();
               if (widget.onLogout != null) {
@@ -283,5 +364,24 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
+  }
+
+  Color _getTemperatureColor(double temperature) {
+    if (temperature < 15) return Colors.blue;
+    if (temperature > 28) return Colors.red;
+    return Colors.orange;
+  }
+
+  String _formatLastUpdate() {
+    final now = DateTime.now();
+    final difference = now.difference(_lastUpdate);
+    
+    if (difference.inSeconds < 60) {
+      return 'hace ${difference.inSeconds} seg';
+    } else if (difference.inMinutes < 60) {
+      return 'hace ${difference.inMinutes} min';
+    } else {
+      return 'hace ${difference.inHours} h';
+    }
   }
 }

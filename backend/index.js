@@ -37,4 +37,7 @@ app.get('/', (req, res) => {
     console.error('Fallo al iniciar el servidor:', err);
     process.exit(1);
   }
+  // En index.js - agregar después de las otras rutas:
+const sensorRoutes = require('./routes/sensors');
+app.use('/api/sensors', sensorRoutes);
 })();

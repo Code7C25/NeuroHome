@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../localization.dart';
+import 'single_camera_screen.dart'; // ← Importar la pantalla de cámara
 
 class DeviceConnectionScreen extends StatelessWidget {
   final String locale;
@@ -23,6 +24,23 @@ class DeviceConnectionScreen extends StatelessWidget {
             const SizedBox(height: 18),
             Text(t('device_connection_desc', locale)),
             const SizedBox(height: 30),
+            
+            // Botón de Cámara en Vivo - FUNCIONAL
+            ElevatedButton.icon(
+              icon: const Icon(Icons.videocam_rounded),
+              label: const Text('Cámara en Vivo'),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => SingleCameraScreen(locale: locale),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+            
+            // Botones que siguen en "próximamente"
             ElevatedButton.icon(
               icon: const Icon(Icons.camera_alt_rounded),
               label: Text(t('add_camera', locale)),

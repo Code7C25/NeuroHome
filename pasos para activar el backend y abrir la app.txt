@@ -1,0 +1,17 @@
+backend:
+
+1- abris una terminal y te dirigís a "aplicacion-assets-nodejs"
+
+2- ejecutas con el comando npm start
+
+xampp:
+
+abris el xampp y activas el MySQL
+
+abrir la aplicación:
+
+1- abris una nueva terminal, sin cerrar ni apagar la anterior del backend.
+
+2- vas a aplicación
+
+3- ejecutas con el comando "flutter run" y seleccionas la opción 2 de Chrome. 

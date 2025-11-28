@@ -22,10 +22,12 @@ app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 
 // Rutas
+const deviceController = require('./controllers/deviceController');
 app.use('/api/auth', authRoutes);
 app.use('/api/protected', protectedRoutes);
 app.use('/api', testRoutes);
 app.use('/api/sensors', sensorRoutes);  // ← AGREGADO en el lugar correcto
+app.post('/api/control', deviceController.controlDevice); // Asegúrate de protegerla si es necesario
 
 // Ruta base de salud
 app.get('/', (req, res) => {

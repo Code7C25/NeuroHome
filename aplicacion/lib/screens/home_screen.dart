@@ -8,6 +8,7 @@ import '../widgets/hero_banner.dart';
 import '../widgets/control_card.dart';
 import '../services/token_storage.dart';
 import '../services/sensor_service.dart';
+import '../services/control_service.dart'; // ✅ Importación agregada
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback onChangeTheme;
@@ -224,7 +225,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
 
-              // SECCIÓN: PORTÓN
+              // SECCIÓN: PORTÓN (CORREGIDA)
               _buildSectionTitle('Portón', theme),
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
@@ -237,13 +238,36 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   delegate: SliverChildListDelegate([
                     ControlCard(
-                      title: 'Portón',
+                      title: 'Portón', // O usa t('gate', widget.locale)
                       icon: Icons.fence_rounded,
                       isOpen: _gateOpen,
-                      onToggle: () => setState(() => _gateOpen = !_gateOpen),
                       typeLabel: 'Acceso',
                       activeColor: Colors.green,
                       locale: widget.locale,
+                      // ✅ LÓGICA DE CONTROL CONECTADA AL BACKEND:
+                      onToggle: () async {
+                        // 1. Cambio visual inmediato (Optimista)
+                        setState(() => _gateOpen = !_gateOpen);
+
+                        // 2. Enviar comando real al Backend
+                        final action = _gateOpen ? 'OPEN' : 'CLOSE';
+                        
+                        // Llamada al servicio
+                        final success = await ControlService.sendCommand('porton', action);
+
+                        // 3. Si falla la conexión, revertir cambio visual
+                        if (!success) {
+                          if (mounted) {
+                            setState(() => _gateOpen = !_gateOpen);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Error al conectar con el portón'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
+                      },
                     ),
                   ]),
                 ),

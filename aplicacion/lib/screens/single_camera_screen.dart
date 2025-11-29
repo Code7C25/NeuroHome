@@ -20,7 +20,7 @@ class _SingleCameraScreenState extends State<SingleCameraScreen> {
   final String _cameraLocalUrl = 'http://172.20.10.4:81/stream'; //pone la IP correcta :81/stream no funciona, prueba solo la IP http://192.168.1.45 o http://192.168.1.45:80/stream
   //Guarda el archivo.
   //Reinicia la App (R).
-  //final String _cameraRemoteUrl = 'http://tudominio.com/camara'; // Opcional
+  final String _cameraRemoteUrl = 'http://tudominio.com/camara'; // Opcional
 
   @override
   void initState() {

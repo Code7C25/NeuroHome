@@ -8,7 +8,7 @@ import '../widgets/hero_banner.dart';
 import '../widgets/control_card.dart';
 import '../services/token_storage.dart';
 import '../services/sensor_service.dart';
-import '../services/control_service.dart'; // ✅ Importación agregada
+import '../services/control_service.dart';
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback onChangeTheme;
@@ -36,7 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // Estados para controles manuales
   bool _mainDoorOpen = false;
   bool _gateOpen = false;
-  bool _luzEncendida = false; // ✅ NUEVA VARIABLE PARA LA LUZ
+  bool _luzEncendida = false;
   
   // Datos en tiempo real de sensores
   double _currentTemperature = 0.0;
@@ -52,7 +52,6 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadSensorData();
-    // Actualizar cada 5 segundos
     _sensorTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
       _loadSensorData();
     });
@@ -77,12 +76,9 @@ class _HomeScreenState extends State<HomeScreen> {
           _realMainDoor = data['mainDoor'] ?? false;
           _lastUpdate = DateTime.parse(data['lastUpdate']);
           _sensorsConnected = true;
-          
-          // Sincronizar estado visual con datos reales
           _mainDoorOpen = _realMainDoor;
         });
         
-        // Mostrar alerta si la puerta se abrió
         if (_realMainDoor && !previousDoorState) {
           _showDoorAlert();
         }
@@ -125,6 +121,7 @@ class _HomeScreenState extends State<HomeScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('📡 ${t('updating_sensors', widget.locale)}'),
+        backgroundColor: AppTheme.darkAccent,
         duration: const Duration(seconds: 2),
       ),
     );
@@ -140,15 +137,27 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHomeContent(ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
+    
     return Stack(
       children: [
+        // FONDO CON GRADIENTE MEJORADO
         Container(
-          decoration: const BoxDecoration(gradient: AppTheme.heroGradient),
+          decoration: isDark 
+              ? AppTheme.getDarkGradientDecoration()
+              : const BoxDecoration(gradient: AppTheme.heroGradient),
         ),
+        
+        // EFECTO DE PARTÍCULAS SUTILES (opcional)
+        if (isDark) ...[
+          _buildAnimatedBackground(),
+        ],
+        
         SafeArea(
           child: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
             slivers: [
-              // Banner Hero
+              // BANNER HERO MEJORADO
               SliverToBoxAdapter(
                 child: HeroBanner(
                   title: t('control_home', widget.locale),
@@ -157,15 +166,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               
+              const SliverToBoxAdapter(child: SizedBox(height: 8)),
+              
               // SECCIÓN: MONITOREO EN VIVO
-              _buildSectionTitle('Cámara y Sensores', theme),
+              _buildSectionTitle('Cámara y Sensores', theme, Icons.monitor_heart_rounded),
               SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 sliver: SliverGrid(
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
                     childAspectRatio: 0.95,
                   ),
                   delegate: SliverChildListDelegate([
@@ -178,6 +189,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       typeLabel: 'Streaming',
                       activeColor: Colors.blue,
                       locale: widget.locale,
+                      isDark: isDark,
                     ),
                     // Sensor de temperatura/humedad
                     ControlCard(
@@ -188,23 +200,26 @@ class _HomeScreenState extends State<HomeScreen> {
                       typeLabel: '${_currentTemperature.toStringAsFixed(1)}°C - ${_currentHumidity.toStringAsFixed(1)}%',
                       activeColor: _getTemperatureColor(_currentTemperature),
                       locale: widget.locale,
+                      isDark: isDark,
                     ),
                   ]),
                 ),
               ),
 
               // Indicador de última actualización
-              _buildLastUpdateIndicator(),
+              _buildLastUpdateIndicator(isDark),
+
+              const SliverToBoxAdapter(child: SizedBox(height: 8)),
 
               // SECCIÓN: PUERTAS
-              _buildSectionTitle(t('doors', widget.locale), theme),
+              _buildSectionTitle(t('doors', widget.locale), theme, Icons.door_front_door_rounded),
               SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 sliver: SliverGrid(
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
                     childAspectRatio: 0.85,
                   ),
                   delegate: SliverChildListDelegate([
@@ -213,18 +228,18 @@ class _HomeScreenState extends State<HomeScreen> {
                       icon: Icons.door_front_door_rounded,
                       isOpen: _mainDoorOpen,
                       onToggle: () async {
-                        // Cambio visual inmediato
                         setState(() => _mainDoorOpen = !_mainDoorOpen);
-                        
-                        // Enviar comando (Lógica inversa: si visual es abierto -> enviar OPEN)
                         final action = _mainDoorOpen ? 'OPEN' : 'CLOSE';
                         final success = await ControlService.sendCommand('puerta', action);
 
                         if (!success && mounted) {
-                           setState(() => _mainDoorOpen = !_mainDoorOpen); // Revertir
-                           ScaffoldMessenger.of(context).showSnackBar(
-                             const SnackBar(content: Text('Error al controlar la puerta')),
-                           );
+                          setState(() => _mainDoorOpen = !_mainDoorOpen);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text('Error al controlar la puerta'),
+                              backgroundColor: Colors.red[400],
+                            ),
+                          );
                         }
                       },
                       typeLabel: _realMainDoor ? 
@@ -232,31 +247,34 @@ class _HomeScreenState extends State<HomeScreen> {
                         '${t('closed', widget.locale)} (${t('sensor', widget.locale)})',
                       activeColor: _mainDoorOpen ? theme.colorScheme.primary : Colors.grey,
                       locale: widget.locale,
+                      isDark: isDark,
                     ),
                   ]),
                 ),
               ),
 
+              const SliverToBoxAdapter(child: SizedBox(height: 8)),
+
               // SECCIÓN: EXTERIORES (Portón y Luces)
-              _buildSectionTitle('Exteriores', theme),
+              _buildSectionTitle('Exteriores', theme, Icons.forest_rounded),
               SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 sliver: SliverGrid(
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
                     childAspectRatio: 0.95,
                   ),
                   delegate: SliverChildListDelegate([
-                    // 1. TARJETA PORTÓN
                     ControlCard(
-                      title: 'Portón', // O usa t('gate', widget.locale)
+                      title: 'Portón',
                       icon: Icons.fence_rounded,
                       isOpen: _gateOpen,
                       typeLabel: 'Acceso',
                       activeColor: Colors.green,
                       locale: widget.locale,
+                      isDark: isDark,
                       onToggle: () async {
                         setState(() => _gateOpen = !_gateOpen);
                         final action = _gateOpen ? 'OPEN' : 'CLOSE';
@@ -264,13 +282,15 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (!success && mounted) {
                           setState(() => _gateOpen = !_gateOpen);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Error al conectar con el portón'), backgroundColor: Colors.red),
+                            SnackBar(
+                              content: const Text('Error al conectar con el portón'),
+                              backgroundColor: Colors.red[400],
+                            ),
                           );
                         }
                       },
                     ),
                     
-                    // 2. ✅ NUEVA TARJETA: LUZ PATIO
                     ControlCard(
                       title: 'Luz Patio',
                       icon: Icons.lightbulb_rounded,
@@ -278,6 +298,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       typeLabel: 'RGB',
                       activeColor: Colors.orange,
                       locale: widget.locale,
+                      isDark: isDark,
                       onToggle: () async {
                         setState(() => _luzEncendida = !_luzEncendida);
                         final action = _luzEncendida ? 'ON' : 'OFF';
@@ -285,7 +306,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (!success && mounted) {
                           setState(() => _luzEncendida = !_luzEncendida);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Error al controlar luz'), backgroundColor: Colors.red),
+                            SnackBar(
+                              content: const Text('Error al controlar luz'),
+                              backgroundColor: Colors.red[400],
+                            ),
                           );
                         }
                       },
@@ -293,7 +317,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ]),
                 ),
               ),
-              const SliverToBoxAdapter(child: SizedBox(height: 60)),
+              const SliverToBoxAdapter(child: SizedBox(height: 80)),
             ],
           ),
         ),
@@ -301,39 +325,77 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title, ThemeData theme) {
-    return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
-      sliver: SliverToBoxAdapter(
-        child: Text(
-          title,
-          style: theme.textTheme.titleLarge?.copyWith(
-            color: theme.colorScheme.primary,
-            fontWeight: FontWeight.bold,
+  // FONDO ANIMADO PARA TEMA OSCURO
+  Widget _buildAnimatedBackground() {
+    return IgnorePointer(
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: RadialGradient(
+            center: Alignment.topLeft,
+            radius: 1.5,
+            colors: [
+              AppTheme.darkAccent.withOpacity(0.1),
+              Colors.transparent,
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildLastUpdateIndicator() {
+  Widget _buildSectionTitle(String title, ThemeData theme, IconData icon) {
     return SliverToBoxAdapter(
       child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: theme.colorScheme.primary,
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              title,
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w700,
+                fontSize: 18,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLastUpdateIndicator(bool isDark) {
+    return SliverToBoxAdapter(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isDark ? AppTheme.darkSurface.withOpacity(0.5) : Colors.white.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark ? AppTheme.darkTextSecondary.withOpacity(0.3) : Colors.grey.withOpacity(0.3),
+          ),
+        ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               Icons.update_rounded,
               size: 16,
-              color: Colors.grey[600],
+              color: isDark ? AppTheme.darkTextSecondary : Colors.grey[600],
             ),
             const SizedBox(width: 8),
             Text(
               '${t('last_update', widget.locale)}: ${_formatLastUpdate()}',
               style: TextStyle(
-                color: Colors.grey[600],
+                color: isDark ? AppTheme.darkTextSecondary : Colors.grey[600],
                 fontSize: 12,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],
@@ -345,6 +407,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     Widget body;
     if (_currentIndex == 1) {
@@ -363,22 +426,53 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       extendBody: true,
       appBar: AppBar(
-        title: const Text('NeuroHome'),
+        title: const Text(
+          'NeuroHome',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 20,
+          ),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
-          IconButton(
-            icon: Icon(
-              _sensorsConnected ? Icons.sensors_rounded : Icons.sensors_off_rounded,
-              color: _sensorsConnected ? Colors.green : Colors.grey,
+          // Indicador de sensores con mejor diseño
+          Container(
+            margin: const EdgeInsets.all(8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.darkSurface : Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: _sensorsConnected 
+                  ? Colors.green.withOpacity(0.5)
+                  : Colors.grey.withOpacity(0.3),
+              ),
             ),
-            tooltip: _sensorsConnected ? 
-              '${t('sensors_connected', widget.locale)}' : 
-              '${t('sensors_disconnected', widget.locale)}',
-            onPressed: _refreshSensorData,
+            child: Row(
+              children: [
+                Icon(
+                  _sensorsConnected ? Icons.sensors_rounded : Icons.sensors_off_rounded,
+                  color: _sensorsConnected ? Colors.green : Colors.grey,
+                  size: 16,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  _sensorsConnected ? 'Online' : 'Offline',
+                  style: TextStyle(
+                    color: _sensorsConnected ? Colors.green : Colors.grey,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ),
           IconButton(
-            icon: const Icon(Icons.logout_rounded),
+            icon: Icon(
+              Icons.logout_rounded,
+              color: isDark ? AppTheme.darkTextPrimary : theme.colorScheme.primary,
+            ),
             tooltip: t('logout', widget.locale),
             onPressed: () async {
               await TokenStorage.delete();
@@ -390,22 +484,35 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: body,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (i) => setState(() => _currentIndex = i),
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.home_outlined),
-            selectedIcon: const Icon(Icons.home_rounded),
-            label: t('home', widget.locale),
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.settings_outlined),
-            selectedIcon: const Icon(Icons.settings_rounded),
-            label: t('settings', widget.locale),
-          ),
-        ],
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 20,
+              offset: const Offset(0, -5),
+            ),
+          ],
+        ),
+        child: NavigationBar(
+          selectedIndex: _currentIndex,
+          onDestinationSelected: (i) => setState(() => _currentIndex = i),
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
+          indicatorColor: isDark ? AppTheme.darkAccent : theme.colorScheme.primary,
+          destinations: [
+            NavigationDestination(
+              icon: const Icon(Icons.home_outlined),
+              selectedIcon: const Icon(Icons.home_rounded),
+              label: t('home', widget.locale),
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.settings_outlined),
+              selectedIcon: const Icon(Icons.settings_rounded),
+              label: t('settings', widget.locale),
+            ),
+          ],
+        ),
       ),
     );
   }

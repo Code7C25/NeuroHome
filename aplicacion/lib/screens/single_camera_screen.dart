@@ -17,7 +17,7 @@ class _SingleCameraScreenState extends State<SingleCameraScreen> {
   bool _isFullscreen = false;
 
   // URL de tu cámara - cambia por la IP real
-  final String _cameraLocalUrl = 'http://192.168.1.100';
+  final String _cameraLocalUrl = 'http://172.20.10.4:81/stream';
   final String _cameraRemoteUrl = 'http://tudominio.com/camara'; // Opcional
 
   @override

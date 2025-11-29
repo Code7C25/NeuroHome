@@ -1,24 +1,37 @@
-// services/sensor_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'token_storage.dart';
 
 class SensorService {
-  static const String _base = 'http://10.0.2.2:3000/api'; // Android emulator
+  // Usamos localhost porque estás en Chrome/Windows
+  static const String _baseUrl = 'http://localhost:3000/api'; 
 
-  // Obtener datos de sensores
   static Future<Map<String, dynamic>> getSensorData() async {
-    final uri = Uri.parse('$_base/sensors/data');
     try {
-      final resp = await http.get(uri);
-      final body = resp.body.isNotEmpty ? jsonDecode(resp.body) : {};
-      
-      if (resp.statusCode == 200) {
-        return {'ok': true, 'data': body['data']};
-      } else {
-        return {'ok': false, 'message': 'Error al obtener datos'};
+      final token = await TokenStorage.getToken();
+      final response = await http.get(
+        Uri.parse('$_baseUrl/sensors/data'), 
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+        
+        if (jsonResponse['ok'] == true) {
+          // Extraemos los datos limpios
+          return {
+            'ok': true,
+            'data': jsonResponse['data'] // Aquí viene temp, humidity, etc.
+          };
+        }
       }
+      return {'ok': false};
     } catch (e) {
-      return {'ok': false, 'message': 'Error de conexión: $e'};
+      print('Error sensor service: $e');
+      return {'ok': false};
     }
   }
 }

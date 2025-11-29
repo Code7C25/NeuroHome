@@ -36,6 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // Estados para controles manuales
   bool _mainDoorOpen = false;
   bool _gateOpen = false;
+  bool _luzEncendida = false; // ✅ NUEVA VARIABLE PARA LA LUZ
   
   // Datos en tiempo real de sensores
   double _currentTemperature = 0.0;
@@ -211,9 +212,20 @@ class _HomeScreenState extends State<HomeScreen> {
                       title: t('main_door', widget.locale),
                       icon: Icons.door_front_door_rounded,
                       isOpen: _mainDoorOpen,
-                      onToggle: () {
+                      onToggle: () async {
+                        // Cambio visual inmediato
                         setState(() => _mainDoorOpen = !_mainDoorOpen);
-                        // Aquí podrías enviar comando a Arduino para abrir/cerrar
+                        
+                        // Enviar comando (Lógica inversa: si visual es abierto -> enviar OPEN)
+                        final action = _mainDoorOpen ? 'OPEN' : 'CLOSE';
+                        final success = await ControlService.sendCommand('puerta', action);
+
+                        if (!success && mounted) {
+                           setState(() => _mainDoorOpen = !_mainDoorOpen); // Revertir
+                           ScaffoldMessenger.of(context).showSnackBar(
+                             const SnackBar(content: Text('Error al controlar la puerta')),
+                           );
+                        }
                       },
                       typeLabel: _realMainDoor ? 
                         '${t('open', widget.locale)} (${t('sensor', widget.locale)})' : 
@@ -225,8 +237,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
 
-              // SECCIÓN: PORTÓN (CORREGIDA)
-              _buildSectionTitle('Portón', theme),
+              // SECCIÓN: EXTERIORES (Portón y Luces)
+              _buildSectionTitle('Exteriores', theme),
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                 sliver: SliverGrid(
@@ -237,6 +249,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     childAspectRatio: 0.95,
                   ),
                   delegate: SliverChildListDelegate([
+                    // 1. TARJETA PORTÓN
                     ControlCard(
                       title: 'Portón', // O usa t('gate', widget.locale)
                       icon: Icons.fence_rounded,
@@ -244,28 +257,36 @@ class _HomeScreenState extends State<HomeScreen> {
                       typeLabel: 'Acceso',
                       activeColor: Colors.green,
                       locale: widget.locale,
-                      // ✅ LÓGICA DE CONTROL CONECTADA AL BACKEND:
                       onToggle: () async {
-                        // 1. Cambio visual inmediato (Optimista)
                         setState(() => _gateOpen = !_gateOpen);
-
-                        // 2. Enviar comando real al Backend
                         final action = _gateOpen ? 'OPEN' : 'CLOSE';
-                        
-                        // Llamada al servicio
                         final success = await ControlService.sendCommand('porton', action);
-
-                        // 3. Si falla la conexión, revertir cambio visual
-                        if (!success) {
-                          if (mounted) {
-                            setState(() => _gateOpen = !_gateOpen);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Error al conectar con el portón'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                          }
+                        if (!success && mounted) {
+                          setState(() => _gateOpen = !_gateOpen);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Error al conectar con el portón'), backgroundColor: Colors.red),
+                          );
+                        }
+                      },
+                    ),
+                    
+                    // 2. ✅ NUEVA TARJETA: LUZ PATIO
+                    ControlCard(
+                      title: 'Luz Patio',
+                      icon: Icons.lightbulb_rounded,
+                      isOpen: _luzEncendida,
+                      typeLabel: 'RGB',
+                      activeColor: Colors.orange,
+                      locale: widget.locale,
+                      onToggle: () async {
+                        setState(() => _luzEncendida = !_luzEncendida);
+                        final action = _luzEncendida ? 'ON' : 'OFF';
+                        final success = await ControlService.sendCommand('luz', action);
+                        if (!success && mounted) {
+                          setState(() => _luzEncendida = !_luzEncendida);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Error al controlar luz'), backgroundColor: Colors.red),
+                          );
                         }
                       },
                     ),
@@ -346,7 +367,6 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
-          // Indicador de conexión con sensores
           IconButton(
             icon: Icon(
               _sensorsConnected ? Icons.sensors_rounded : Icons.sensors_off_rounded,

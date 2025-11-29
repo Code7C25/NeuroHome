@@ -1,29 +1,50 @@
-// services/mqttService.js
 const mqtt = require('mqtt');
 
-// Usa un broker público para pruebas o tu IP local si instalas Mosquitto
-// Opción A (Público - Más fácil): 'mqtt://broker.hivemq.com'
-// Opción B (Local): 'mqtt://localhost'
 const BROKER_URL = 'mqtt://broker.hivemq.com'; 
+
+// Memoria temporal para los sensores
+let ultimosDatos = { 
+  temperature: 0, 
+  humidity: 0, 
+  mainDoor: false, 
+  lastUpdate: new Date() 
+};
 
 const client = mqtt.connect(BROKER_URL);
 
 client.on('connect', () => {
-  console.log(`🔌 Conectado a MQTT Broker: ${BROKER_URL}`);
-  // Suscribirse a tópicos de sensores para guardarlos en BD si quieres
-  client.subscribe('casa/sensores/#');
+  console.log(`🔌 Backend conectado a MQTT Broker: ${BROKER_URL}`);
+  // Suscribirse para escuchar a la ESP32
+  client.subscribe('casa/sensores/clima'); 
 });
 
-// Función para enviar comandos
+client.on('message', (topic, message) => {
+  if (topic === 'casa/sensores/clima') {
+    try {
+      const datos = JSON.parse(message.toString());
+      
+      // Guardar en memoria
+      ultimosDatos.temperature = datos.temperature;
+      ultimosDatos.humidity = datos.humidity;
+      ultimosDatos.lastUpdate = new Date();
+      
+      console.log('🌡️ Clima actualizado:', ultimosDatos);
+    } catch (e) {
+      console.error('Error procesando datos del sensor:', e);
+    }
+  }
+});
+
 const sendCommand = (topic, message) => {
   if (client.connected) {
     client.publish(topic, message);
-    console.log(`📤 MQTT Enviado: ${topic} -> ${message}`);
+    console.log(`📤 Comando enviado: ${topic} -> ${message}`);
     return true;
-  } else {
-    console.error('⚠️ Cliente MQTT no conectado');
-    return false;
   }
+  return false;
 };
 
-module.exports = { client, sendCommand };
+// Función para que el controlador pida los datos
+const getSensores = () => ultimosDatos;
+
+module.exports = { client, sendCommand, getSensores };

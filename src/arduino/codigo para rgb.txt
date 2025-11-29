@@ -1,0 +1,29 @@
+int pinRojo = 9;
+int pinVerde = 10;
+int pinAzul = 11;
+
+void setup() {
+  pinMode(pinRojo, OUTPUT);
+  pinMode(pinVerde, OUTPUT);
+  pinMode(pinAzul, OUTPUT);
+}
+
+void loop() {
+  // Amarillo
+  setColor(255, 255, 0);
+  delay(1000);
+
+  // Rojo
+  setColor(255, 0, 0);
+  delay(1000);
+
+  // Azul
+  setColor(0, 0, 255);
+  delay(1000);
+}
+
+void setColor(int rojo, int verde, int azul) {
+  analogWrite(pinRojo, rojo);
+  analogWrite(pinVerde, verde);
+  analogWrite(pinAzul, azul);
+}

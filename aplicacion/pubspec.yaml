@@ -19,7 +19,7 @@ dependencies:
   shared_preferences: ^2.2.2
   connectivity_plus: ^5.0.1
   dart_jsonwebtoken: ^3.0.1
-  # bcrypt removido - no es necesario con JWT
+  image: ^4.0.17  # ✅ DEPENDENCIA AGREGADA
 
 dev_dependencies:
   flutter_test:

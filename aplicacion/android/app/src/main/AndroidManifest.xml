@@ -1,8 +1,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- ✅ PERMISO INTERNET AGREGADO -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    
     <application
         android:label="neurohome"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        <!-- ✅ CLEARTEXT TRAFFIC AGREGADO -->
+        android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"

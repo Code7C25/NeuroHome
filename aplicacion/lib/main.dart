@@ -4,6 +4,9 @@ import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 
 void main() {
+  // ✅ SOLO esta línea es esencial
+  WidgetsFlutterBinding.ensureInitialized();
+  
   runApp(const MainApp());
 }
 
